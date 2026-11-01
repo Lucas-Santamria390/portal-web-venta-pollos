@@ -205,6 +205,61 @@ class OrderTest extends TestCase
         $this->assertSame(OrderStatus::Reservado, $order->refresh()->status);
     }
 
+    public function test_manual_delivery_derives_weight_from_the_price_when_weight_is_missing(): void
+    {
+        Setting::factory()->create(['price_per_lb' => '1000.00', 'auto_price' => false]);
+        $order = Order::factory()->withReservedChickens(2)->create(['price_per_lb' => '1000.00']);
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('pedidos.deliver', $order), [
+                'prices' => ['5000.00', '7000.00'],
+            ])
+            ->assertRedirect(route('pedidos.show', $order));
+
+        $order->refresh()->load('items');
+
+        $this->assertSame(OrderStatus::Entregado, $order->status);
+        $this->assertSame('12000.00', $order->total);
+        $this->assertSame('5.00', $order->items[0]->weight_lb);
+        $this->assertSame('7.00', $order->items[1]->weight_lb);
+    }
+
+    public function test_manual_delivery_requires_weight_when_there_is_no_reference_price(): void
+    {
+        Setting::factory()->create(['price_per_lb' => '0.00', 'auto_price' => false]);
+        $order = Order::factory()->withReservedChickens(1)->create(['price_per_lb' => '0.00']);
+
+        $this->actingAs(User::factory()->create())
+            ->from(route('pedidos.deliver.edit', $order))
+            ->post(route('pedidos.deliver', $order), [
+                'prices' => ['5000.00'],
+            ])
+            ->assertSessionHasErrors('weights');
+
+        $this->assertSame(OrderStatus::Reservado, $order->refresh()->status);
+    }
+
+    public function test_a_direct_sale_derives_weight_from_manual_prices(): void
+    {
+        Setting::factory()->create(['price_per_lb' => '1000.00', 'auto_price' => false]);
+
+        $this->actingAs(User::factory()->create())
+            ->post('/pedidos/vender', [
+                'customer_id' => '',
+                'quantity' => 2,
+                'prices' => ['4000.00', '5000.00'],
+                'paid_amount' => '9000.00',
+                'method' => PaymentMethod::Transferencia->value,
+            ])
+            ->assertRedirect();
+
+        $order = Order::query()->with('items')->firstOrFail();
+
+        $this->assertSame('4.00', $order->items[0]->weight_lb);
+        $this->assertSame('5.00', $order->items[1]->weight_lb);
+        $this->assertSame('9000.00', $order->total);
+    }
+
     public function test_a_delivery_cannot_happen_twice(): void
     {
         Setting::factory()->create(['price_per_lb' => '1000.00', 'auto_price' => true]);
@@ -444,6 +499,40 @@ class OrderTest extends TestCase
             ->assertOk()
             ->assertSeeText('Ana Torres')
             ->assertDontSeeText('Luis Díaz');
+    }
+
+    public function test_orders_list_can_be_filtered_by_payment_method(): void
+    {
+        $admin = User::factory()->create();
+        $efectivo = Customer::factory()->create(['name' => 'Cliente Efectivo']);
+        $transferencia = Customer::factory()->create(['name' => 'Cliente Transferencia']);
+
+        $cashOrder = Order::factory()->collected()->withChickens(1, 5, 1000)->for($efectivo)->create(['user_id' => $admin->getKey()]);
+        Payment::factory()->create([
+            'order_id' => $cashOrder->getKey(),
+            'method' => PaymentMethod::Efectivo,
+            'amount' => '1000.00',
+        ]);
+
+        $transferOrder = Order::factory()->collected()->withChickens(1, 5, 1000)->for($transferencia)->create(['user_id' => $admin->getKey()]);
+        Payment::factory()->create([
+            'order_id' => $transferOrder->getKey(),
+            'method' => PaymentMethod::Transferencia,
+            'amount' => '1000.00',
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/pedidos?metodo=transferencia')
+            ->assertOk()
+            ->assertViewHas('method', PaymentMethod::Transferencia->value)
+            ->assertSeeText('Cliente Transferencia')
+            ->assertDontSeeText('Cliente Efectivo');
+
+        $this->actingAs($admin)
+            ->get('/pedidos?metodo=efectivo')
+            ->assertOk()
+            ->assertSeeText('Cliente Efectivo')
+            ->assertDontSeeText('Cliente Transferencia');
     }
 
     public function test_order_detail_shows_chickens_pounds_and_money(): void

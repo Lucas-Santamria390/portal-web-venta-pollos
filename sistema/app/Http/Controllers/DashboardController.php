@@ -6,6 +6,9 @@ use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
+use App\Services\DashboardService;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -70,6 +73,20 @@ class DashboardController extends Controller
             'poundsThisMonth' => $poundsThisMonth,
             'upcomingReservations' => $upcomingReservations,
             'recentOrders' => $recentOrders,
+        ]);
+    }
+
+    /**
+     * Show the sales and payments dashboard for a given period.
+     */
+    public function panel(Request $request, DashboardService $dashboardService): View
+    {
+        $filters = $request->validate([
+            'periodo' => ['nullable', Rule::in(['hoy', 'semana', 'mes', 'todo'])],
+        ]);
+
+        return view('modules.dashboard.index', [
+            'summary' => $dashboardService->summary($filters['periodo'] ?? 'mes'),
         ]);
     }
 }

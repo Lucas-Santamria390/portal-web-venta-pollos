@@ -39,7 +39,7 @@
         <div class="flex flex-wrap gap-2">
             @foreach ($tabs as $value => $label)
                 <a
-                    href="{{ route('pedidos.index', array_filter(['estado' => $value, 'buscar' => $search, 'desde' => $from, 'hasta' => $to])) }}"
+                    href="{{ route('pedidos.index', array_filter(['estado' => $value, 'metodo' => $method, 'buscar' => $search, 'desde' => $from, 'hasta' => $to])) }}"
                     class="rounded-full px-3 py-1.5 text-sm font-medium transition {{ $status === $value ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50' }}"
                 >
                     {{ $label }}
@@ -47,7 +47,7 @@
             @endforeach
         </div>
 
-        <form method="GET" action="{{ route('pedidos.index') }}" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <form method="GET" action="{{ route('pedidos.index') }}" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <input type="hidden" name="estado" value="{{ $status }}">
 
             <input
@@ -57,6 +57,18 @@
                 placeholder="Buscar por cliente o pedido"
                 class="rounded-lg border-slate-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
             >
+
+            <select
+                name="metodo"
+                class="rounded-lg border-slate-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+            >
+                <option value="">Todos los medios de pago</option>
+                @foreach (\App\Enums\PaymentMethod::cases() as $paymentMethod)
+                    <option value="{{ $paymentMethod->value }}" @selected($method === $paymentMethod->value)>
+                        {{ $paymentMethod->label() }}
+                    </option>
+                @endforeach
+            </select>
 
             <input
                 type="date"
@@ -80,9 +92,9 @@
         @if ($orders->isEmpty())
             <x-empty-state
                 title="Aún no hay pedidos"
-                description="{{ $search !== '' || $from || $to ? 'No encontramos pedidos con esos filtros.' : 'Registra una reserva o vende ahora para empezar a ver pedidos, entregas y saldos.' }}"
+                description="{{ $search !== '' || $method || $from || $to ? 'No encontramos pedidos con esos filtros.' : 'Registra una reserva o vende ahora para empezar a ver pedidos, entregas y saldos.' }}"
             >
-                @if ($search === '' && ! $from && ! $to)
+                @if ($search === '' && ! $method && ! $from && ! $to)
                     <x-slot name="action">
                         <div class="flex flex-wrap justify-center gap-2">
                             <a href="{{ route('pedidos.create') }}" class="inline-flex rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50">
@@ -109,6 +121,7 @@
                             <th class="px-4 py-3 text-right">Pagado</th>
                             <th class="px-4 py-3 text-right">Saldo</th>
                             <th class="px-4 py-3">Estado</th>
+                            <th class="px-4 py-3">Cobros</th>
                             <th class="px-4 py-3 text-right">Acciones</th>
                         </tr>
                     </thead>
@@ -158,6 +171,15 @@
                                 <td class="px-4 py-3">
                                     <x-order-status :status="$order->status" />
                                 </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex flex-wrap gap-1">
+                                        @forelse ($order->payments->pluck('method')->unique() as $paymentMethod)
+                                            <x-payment-method :method="$paymentMethod" />
+                                        @empty
+                                            <span class="text-xs text-slate-400">—</span>
+                                        @endforelse
+                                    </div>
+                                </td>
                                 <td class="px-4 py-3 text-right">
                                     <div class="inline-flex items-center gap-3">
                                         <a href="{{ route('pedidos.show', $order) }}" class="text-sm font-medium text-emerald-700 hover:underline">Ver</a>
@@ -190,6 +212,14 @@
                             </div>
                             <x-order-status :status="$order->status" />
                         </div>
+
+                        @if ($order->payments->isNotEmpty())
+                            <div class="mt-2 flex flex-wrap gap-1">
+                                @foreach ($order->payments->pluck('method')->unique() as $paymentMethod)
+                                    <x-payment-method :method="$paymentMethod" />
+                                @endforeach
+                            </div>
+                        @endif
 
                         <div class="mt-3 flex items-end justify-between">
                             <div>

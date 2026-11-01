@@ -55,7 +55,7 @@ class OrderService
 
             $items = $this->buildPricedItems(
                 $quantity,
-                $data['weights'],
+                $data['weights'] ?? [],
                 $data['prices'] ?? [],
                 $pricePerLb,
                 $autoPrice,
@@ -133,7 +133,9 @@ class OrderService
 
             if ($lockedOrder->isDelivered()) {
                 $autoPrice = (bool) $setting->auto_price;
-                $pricePerLb = round((float) ($data['price_per_lb'] ?? $lockedOrder->price_per_lb ?? $setting->price_per_lb), 2);
+                $requestedPrice = (float) ($data['price_per_lb'] ?? 0);
+                $snapshotPrice = (float) ($lockedOrder->price_per_lb ?? 0);
+                $pricePerLb = round($requestedPrice > 0 ? $requestedPrice : ($snapshotPrice > 0 ? $snapshotPrice : (float) $setting->price_per_lb), 2);
                 $items = $this->buildPricedItems(
                     $quantity,
                     $data['weights'] ?? [],
@@ -185,11 +187,13 @@ class OrderService
             $setting = Setting::current();
             $autoPrice = (bool) $setting->auto_price;
             $quantity = $lockedOrder->items()->count();
-            $pricePerLb = round((float) ($data['price_per_lb'] ?? $lockedOrder->price_per_lb ?? $setting->price_per_lb), 2);
+            $requestedPrice = (float) ($data['price_per_lb'] ?? 0);
+            $snapshotPrice = (float) ($lockedOrder->price_per_lb ?? 0);
+            $pricePerLb = round($requestedPrice > 0 ? $requestedPrice : ($snapshotPrice > 0 ? $snapshotPrice : (float) $setting->price_per_lb), 2);
 
             $items = $this->buildPricedItems(
                 $quantity,
-                $data['weights'],
+                $data['weights'] ?? [],
                 $data['prices'] ?? [],
                 $pricePerLb,
                 $autoPrice,
@@ -388,15 +392,17 @@ class OrderService
         $items = [];
 
         for ($index = 0; $index < $quantity; $index++) {
-            $weight = $this->resolveWeight($weights[$index] ?? null, $index + 1);
-
-            if ($weight === null) {
-                throw ValidationException::withMessages([
-                    'weights' => 'Registra el peso del pollo '.($index + 1).'.',
-                ]);
-            }
+            $position = $index + 1;
 
             if ($autoPrice) {
+                $weight = $this->resolveWeight($weights[$index] ?? null, $position);
+
+                if ($weight === null) {
+                    throw ValidationException::withMessages([
+                        'weights' => 'Registra el peso del pollo '.$position.'.',
+                    ]);
+                }
+
                 if ($pricePerLb <= 0) {
                     throw ValidationException::withMessages([
                         'price_per_lb' => 'Configura un precio por libra mayor a cero antes de vender.',
@@ -409,13 +415,16 @@ class OrderService
 
                 if ($price === null || $price <= 0) {
                     throw ValidationException::withMessages([
-                        'prices' => 'Indica el precio del pollo '.($index + 1).'.',
+                        'prices' => 'Indica el precio del pollo '.$position.'.',
                     ]);
                 }
+
+                $weight = $this->resolveWeight($weights[$index] ?? null, $position)
+                    ?? $this->calculateWeightFromPrice($price, $pricePerLb, $position);
             }
 
             $items[] = [
-                'position' => $index + 1,
+                'position' => $position,
                 'weight_lb' => $weight,
                 'price' => $price,
             ];
@@ -442,6 +451,28 @@ class OrderService
         }
 
         return $value;
+    }
+
+    /**
+     * Derive the weight in pounds from a manually entered price and the reference price per pound.
+     */
+    private function calculateWeightFromPrice(float $price, float $pricePerLb, int $position): float
+    {
+        if ($pricePerLb <= 0) {
+            throw ValidationException::withMessages([
+                'weights' => 'Registra el peso del pollo '.$position.': no hay precio por libra para calcularlo.',
+            ]);
+        }
+
+        $weight = round($price / $pricePerLb, 2);
+
+        if ($weight <= 0) {
+            throw ValidationException::withMessages([
+                'weights' => 'El peso del pollo '.$position.' debe ser mayor a cero.',
+            ]);
+        }
+
+        return $weight;
     }
 
     /**

@@ -22,14 +22,17 @@ class SellNowRequest extends FormRequest
      */
     public function rules(): array
     {
-        $autoPrice = (bool) Setting::current()->auto_price;
+        $setting = Setting::current();
+        $autoPrice = (bool) $setting->auto_price;
+        $referencePrice = (float) (filled($this->input('price_per_lb')) ? $this->input('price_per_lb') : $setting->price_per_lb);
+        $weightCanBeDerived = ! $autoPrice && $referencePrice > 0;
 
         return [
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'quantity' => ['required', 'integer', 'min:1', 'max:100'],
             'note' => ['nullable', 'string', 'max:1000'],
-            'weights' => ['required', 'array'],
-            'weights.*' => ['required', 'numeric', 'min:0.01', 'max:9999.99', 'decimal:0,2'],
+            'weights' => [Rule::requiredIf(! $weightCanBeDerived), 'nullable', 'array'],
+            'weights.*' => [Rule::requiredIf(! $weightCanBeDerived), 'nullable', 'numeric', 'min:0.01', 'max:9999.99', 'decimal:0,2'],
             'price_per_lb' => [Rule::requiredIf($autoPrice), 'nullable', 'numeric', 'min:0.01', 'max:999999.99', 'decimal:0,2'],
             'prices' => [Rule::requiredIf(! $autoPrice), 'nullable', 'array'],
             'prices.*' => [Rule::requiredIf(! $autoPrice), 'nullable', 'numeric', 'min:0.01', 'max:9999999999.99', 'decimal:0,2'],

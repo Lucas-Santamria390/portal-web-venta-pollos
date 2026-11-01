@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PaymentMethod;
 use App\Http\Requests\DeliverOrderRequest;
 use App\Http\Requests\RegisterPaymentRequest;
 use App\Http\Requests\SellNowRequest;
@@ -30,21 +31,24 @@ class OrderController extends Controller
     {
         $filters = $request->validate([
             'estado' => ['nullable', Rule::in(['todas', 'reservado', 'entregado', 'cobrado', 'anulado'])],
+            'metodo' => ['nullable', Rule::in(array_column(PaymentMethod::cases(), 'value'))],
             'buscar' => ['nullable', 'string', 'max:150'],
             'desde' => ['nullable', 'date'],
             'hasta' => ['nullable', 'date', 'after_or_equal:desde'],
         ]);
 
         $status = $filters['estado'] ?? 'todas';
+        $method = $filters['metodo'] ?? null;
         $search = trim($filters['buscar'] ?? '');
         $from = $filters['desde'] ?? null;
         $to = $filters['hasta'] ?? null;
 
         $orders = Order::query()
-            ->with(['customer', 'user'])
+            ->with(['customer', 'user', 'payments'])
             ->withCount('items')
             ->withSum('payments', 'amount')
             ->when($status !== 'todas', fn ($query) => $query->where('status', $status))
+            ->when($method, fn ($query) => $query->whereHas('payments', fn ($query) => $query->where('method', $method)))
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($query) use ($search): void {
                     $query->whereHas('customer', function ($query) use ($search): void {
@@ -65,6 +69,7 @@ class OrderController extends Controller
         return view('modules.pedidos.index', [
             'orders' => $orders,
             'status' => $status,
+            'method' => $method,
             'search' => $search,
             'from' => $from,
             'to' => $to,

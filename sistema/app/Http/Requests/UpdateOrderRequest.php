@@ -28,7 +28,12 @@ class UpdateOrderRequest extends FormRequest
     {
         $order = $this->route('order');
         $isDelivered = $order instanceof Order && $order->isDelivered();
-        $autoPrice = (bool) Setting::current()->auto_price;
+        $setting = Setting::current();
+        $autoPrice = (bool) $setting->auto_price;
+        $referencePrice = (float) (filled($this->input('price_per_lb'))
+            ? $this->input('price_per_lb')
+            : (($order instanceof Order && (float) $order->price_per_lb > 0) ? $order->price_per_lb : $setting->price_per_lb));
+        $weightCanBeDerived = $isDelivered && ! $autoPrice && $referencePrice > 0;
 
         return [
             'customer_id' => ['required', 'integer', 'exists:customers,id'],
@@ -36,7 +41,7 @@ class UpdateOrderRequest extends FormRequest
             'delivery_date' => ['nullable', 'date'],
             'note' => ['nullable', 'string', 'max:1000'],
             'weights' => ['nullable', 'array'],
-            'weights.*' => [Rule::requiredIf($isDelivered), 'nullable', 'numeric', 'min:0.01', 'max:9999.99', 'decimal:0,2'],
+            'weights.*' => [Rule::requiredIf($isDelivered && ! $weightCanBeDerived), 'nullable', 'numeric', 'min:0.01', 'max:9999.99', 'decimal:0,2'],
             'price_per_lb' => [Rule::requiredIf($isDelivered && $autoPrice), 'nullable', 'numeric', 'min:0.01', 'max:999999.99', 'decimal:0,2'],
             'prices' => [Rule::requiredIf($isDelivered && ! $autoPrice), 'nullable', 'array'],
             'prices.*' => [Rule::requiredIf($isDelivered && ! $autoPrice), 'nullable', 'numeric', 'min:0.01', 'max:9999999999.99', 'decimal:0,2'],

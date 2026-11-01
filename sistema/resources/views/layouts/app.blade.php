@@ -16,6 +16,7 @@
         @php
             $links = [
                 ['route' => 'dashboard', 'label' => 'Inicio', 'icon' => 'home'],
+                ['route' => 'dashboard.panel', 'label' => 'Dashboard', 'short' => 'Panel', 'icon' => 'chart', 'match' => 'dashboard.panel'],
                 ['route' => 'pedidos.index', 'label' => 'Pedidos', 'icon' => 'receipt', 'match' => 'pedidos.*'],
                 ['route' => 'por-cobrar.index', 'label' => 'Por cobrar', 'icon' => 'cash'],
                 ['route' => 'clientes.index', 'label' => 'Clientes', 'icon' => 'users'],
@@ -113,6 +114,7 @@
             @php($mobileColumns = match (count($links)) {
                 5 => 'grid-cols-5',
                 6 => 'grid-cols-6',
+                7 => 'grid-cols-7',
                 default => 'grid-cols-4',
             })
 
