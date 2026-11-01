@@ -71,8 +71,8 @@ Los clientes **no** se registran, no inician sesión y no ven pedidos. No hay po
   cobrado del mes, libras vendidas del mes, próximas reservas y pedidos recientes.
 - Anulación solo para el administrador y solo si no hay pagos.
 - Uso desde PC del local y desde celular del personal.
-- Acceso público por HTTPS con el dominio de Tailscale, protegido por autenticación
-  básica y por el login del portal.
+- Acceso remoto por HTTPS a través de la red privada del negocio, protegido por
+  autenticación del servidor y por el login del portal.
 
 ## 6. Fuera de alcance
 
@@ -119,7 +119,7 @@ reservado ──entregar──► entregado ──saldo 0──► cobrado
 | D9 | **Vender ahora** con pago completo permite cliente opcional («Consumidor final») |
 | D10 | Anular es exclusivo del administrador y se bloquea si existe cualquier pago |
 | D11 | Tablas en inglés, interfaz en español |
-| D12 | Acceso remoto por **Tailscale**, con HTTPS y autenticación adicional configurados fuera del repositorio |
+| D12 | Acceso remoto por **red privada (VPN)**, con HTTPS y autenticación adicional configurados fuera del repositorio |
 
 ## 9. Requisitos no funcionales
 

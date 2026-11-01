@@ -24,13 +24,13 @@ Venta directa: **Vender ahora** crea, entrega y cobra en un solo paso.
 
 ## Stack
 
-Laravel 13 · PHP 8.3 · Blade · Tailwind · SQLite · nginx + php-cgi · Tailscale
+Laravel 13 · PHP 8.3 · Blade · Tailwind · SQLite · nginx + php-cgi
 
 ## Acceso
 
 Las URLs, credenciales y detalles de red dependen del entorno y deben configurarse
-fuera del repositorio. El acceso remoto puede protegerse con Tailscale, HTTPS,
-autenticación del servidor y el login del portal.
+fuera del repositorio. El acceso remoto puede protegerse con una red privada,
+HTTPS, autenticación del servidor y el login del portal.
 
 ## Estructura del proyecto
 

@@ -12,7 +12,7 @@ class SecureSessionCookie
      * Marca la cookie de sesión como Secure cuando la petición llega por HTTPS.
      *
      * Se ejecuta después de TrustProxies, así que reconoce el esquema real
-     * detrás del proxy de Tailscale Funnel. En HTTP local la cookie sigue
+     * detrás de un proxy inverso con HTTPS. En HTTP local la cookie sigue
      * funcionando para no bloquear el acceso dentro de la red del local.
      */
     public function handle(Request $request, Closure $next): Response

@@ -16,7 +16,7 @@
 | Entorno | Stack |
 |---|---|
 | Local (desarrollo) | Laragon · PHP 8.3.30 · Composer 2.9.4 · Node 24 |
-| Remoto (ejecución) | PHP 8.3.36 · Composer 2.10.3 · SQLite · Tailscale |
+| Remoto (ejecución) | PHP 8.3.36 · Composer 2.10.3 · SQLite · red privada |
 
 Acceso remoto por SSH mediante una configuración privada del entorno.
 
@@ -167,16 +167,17 @@ Acceso remoto por SSH mediante una configuración privada del entorno.
 1. Mensajes de validación en español.
 2. Respaldos automáticos diarios con retención de 14 días.
 3. Servidor en el puerto 80 con tareas de Windows (arranque, respaldo y vigilancia).
-4. Acceso por Tailscale.
+4. Acceso remoto por red privada.
 5. Prueba de aceptación del flujo completo.
 
-**Estado:** sistema desplegado en una instalación remota protegida por Tailscale.
+**Estado:** sistema desplegado en una instalación remota protegida por red privada
+y autenticación adicional.
 
 **Pendiente de verificación manual en el local:**
 
-- Recorrer el flujo completo desde un celular real con Tailscale.
+- Recorrer el flujo completo desde un celular real a través de la red privada.
 - Cambiar la contraseña inicial del administrador y la del usuario `Lucas`.
-- Evaluar deshabilitar el acceso SSH por contraseña y restringirlo a Tailscale.
+- Evaluar deshabilitar el acceso SSH por contraseña y restringirlo a la red privada.
 
 ## Fase 11 — Rendimiento y acceso público (completada)
 
@@ -186,7 +187,7 @@ Acceso remoto por SSH mediante una configuración privada del entorno.
 3. Sesiones y caché movidas de SQLite a archivos.
 4. nginx 1.30.6 + pool de 4 procesos `php-cgi` en los puertos 9001-9004.
 5. Autenticación básica de nginx como segunda barrera.
-6. Publicación opcional mediante **Tailscale Funnel**, con la URL definida fuera del repositorio.
+6. Publicación opcional mediante un **túnel HTTPS**, con la URL definida fuera del repositorio.
 7. `trustProxies` y `SecureSessionCookie` para reconocer HTTPS detrás del proxy.
 
 **Resultados medidos:**
@@ -195,7 +196,7 @@ Acceso remoto por SSH mediante una configuración privada del entorno.
 |---|---|---|
 | Página individual (red interna) | ~650 ms | ~50 ms |
 | 4 peticiones simultáneas | 4,5 s en cola | ~50-110 ms cada una |
-| Acceso público por Funnel | — | ~0,7-0,9 s (latencia del punto de entrada) |
+| Acceso público por túnel | — | ~0,7-0,9 s (latencia del punto de entrada) |
 
 **Decisión aplicada:** la cookie de sesión se marca `Secure` solo en HTTPS, para no
 romper el acceso por HTTP dentro de la red del local.
@@ -237,7 +238,7 @@ anulación con pagos, venta directa con saldo sin cliente y venta directa con so
 | Personal cobra y no registra | Regla operativa: el pago se registra en el momento |
 | PC del local apagada = sin acceso remoto | Definir horario; evaluar VPS si se requiere 24/7 |
 | Windows 10 Home sin soporte desde octubre de 2025 | No exponer más servicios que el portal; evaluar VPS Linux |
-| Latencia del acceso público por Funnel | Usar la URL interna para el trabajo diario; Funnel para consultas externas |
+| Latencia del acceso público por túnel | Usar la URL interna para el trabajo diario; el túnel para consultas externas |
 | Pérdida de datos | Respaldo diario + copia externa semanal |
 | Cambios de alcance | Documentos 01–03 como línea base |
 
