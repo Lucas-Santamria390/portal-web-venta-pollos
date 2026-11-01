@@ -299,7 +299,7 @@
                             <td class="px-5 py-3 text-right font-semibold text-emerald-700"><x-money :value="$payment->amount" /></td>
                             @if ($canDelete)
                                 <td class="px-5 py-3 text-right">
-                                    <form method="POST" action="{{ route('pedidos.payments.destroy', [$order, $payment]) }}" onsubmit="return confirm('¿Eliminar este cobro de {{ number_format((float) $payment->amount, 2, ',', '.') }}? El saldo del pedido se recalculará.')">
+                                    <form method="POST" action="{{ route('pedidos.payments.destroy', [$order, $payment]) }}" onsubmit="return confirm('¿Eliminar este cobro? El saldo del pedido se recalculará.')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="text-sm font-medium text-rose-700 hover:underline">Eliminar</button>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Order;
 use App\Models\Setting;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -21,11 +22,16 @@ class DeliverOrderRequest extends FormRequest
      */
     public function rules(): array
     {
-        $autoPrice = (bool) Setting::current()->auto_price;
+        $setting = Setting::current();
+        $autoPrice = (bool) $setting->auto_price;
+        $order = $this->route('order');
+        $orderPrice = $order instanceof Order ? (float) $order->price_per_lb : 0.0;
+        $referencePrice = $orderPrice > 0 ? $orderPrice : (float) $setting->price_per_lb;
+        $weightCanBeDerived = ! $autoPrice && $referencePrice > 0;
 
         return [
-            'weights' => ['required', 'array'],
-            'weights.*' => ['required', 'numeric', 'min:0.01', 'max:9999.99', 'decimal:0,2'],
+            'weights' => [Rule::requiredIf(! $weightCanBeDerived), 'nullable', 'array'],
+            'weights.*' => [Rule::requiredIf(! $weightCanBeDerived), 'nullable', 'numeric', 'min:0.01', 'max:9999.99', 'decimal:0,2'],
             'price_per_lb' => [Rule::requiredIf($autoPrice), 'nullable', 'numeric', 'min:0.01', 'max:999999.99', 'decimal:0,2'],
             'prices' => [Rule::requiredIf(! $autoPrice), 'nullable', 'array'],
             'prices.*' => [Rule::requiredIf(! $autoPrice), 'nullable', 'numeric', 'min:0.01', 'max:9999999999.99', 'decimal:0,2'],

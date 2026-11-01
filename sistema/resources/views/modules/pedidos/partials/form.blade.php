@@ -3,13 +3,14 @@
     $isEdit = $mode === 'edit';
     $isDeliveredEdit = $isEdit && $order?->isDelivered();
     $showPricing = $isSell || $isDeliveredEdit;
-    $requireWeights = $isSell || $isDeliveredEdit;
     $autoPrice = (bool) $setting->auto_price;
 
     $initialQuantity = (int) old('quantity', $order?->items->count() ?: 1);
     $initialWeights = old('weights', $order?->items->map(fn ($item) => $item->weight_lb !== null ? number_format((float) $item->weight_lb, 2, '.', '') : '')->values()->all() ?? []);
     $initialPrices = old('prices', $order?->items->map(fn ($item) => $item->price !== null ? number_format((float) $item->price, 2, '.', '') : '')->values()->all() ?? []);
-    $initialPricePerLb = old('price_per_lb', $order?->price_per_lb ?? $setting->price_per_lb);
+    $initialPricePerLb = old('price_per_lb', (float) ($order?->price_per_lb ?? 0) > 0 ? $order->price_per_lb : $setting->price_per_lb);
+    $canDeriveWeight = $showPricing && ! $autoPrice && (float) $initialPricePerLb > 0;
+    $requireWeights = ($isSell || $isDeliveredEdit) && ! $canDeriveWeight;
     $initialCustomerId = old('customer_id', $order?->customer_id ?? $selectedCustomerId ?? '');
     $initialDeliveryDate = old('delivery_date', $order?->delivery_date?->format('Y-m-d') ?? '');
     $initialNote = old('note', $order?->note ?? '');
@@ -135,6 +136,8 @@
                 <p class="mt-3 text-xs text-slate-400">
                     @if ($requireWeights)
                         El peso de cada pollo es obligatorio para calcular el precio.
+                    @elseif ($showPricing && ! $autoPrice)
+                        Escribe el precio de cada pollo y el peso se calculará automáticamente. Puedes ajustarlo.
                     @else
                         Puedes dejar los pesos para el momento de la entrega.
                     @endif
@@ -154,9 +157,31 @@
                             </div>
 
                             <div class="mt-2 grid gap-3 sm:grid-cols-2">
+                                @if ($showPricing && ! $autoPrice)
+                                    <div>
+                                        <label class="text-xs font-medium text-slate-500">Precio del pollo</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0.01"
+                                            max="9999999999.99"
+                                            x-bind:name="'prices[' + index + ']'"
+                                            x-model="prices[index]"
+                                            x-on:input="syncWeightFromPrice(index); syncPaid()"
+                                            required
+                                            class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                                        >
+                                    </div>
+                                @endif
+
                                 <div>
                                     <label class="text-xs font-medium text-slate-500">
-                                        Peso en libras {{ $requireWeights ? '' : '(opcional)' }}
+                                        Peso en libras
+                                        @if ($canDeriveWeight)
+                                            <span class="font-normal text-slate-400">(calculado, editable)</span>
+                                        @elseif (! $requireWeights)
+                                            <span class="font-normal text-slate-400">(opcional)</span>
+                                        @endif
                                     </label>
                                     <input
                                         type="number"
@@ -169,24 +194,12 @@
                                         @if ($requireWeights) required @endif
                                         class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
                                     >
+                                    @if ($canDeriveWeight)
+                                        <p class="mt-1 text-xs text-slate-400">
+                                            Se calcula con el precio por libra de referencia: <x-money :value="$initialPricePerLb" />.
+                                        </p>
+                                    @endif
                                 </div>
-
-                                @if ($showPricing && ! $autoPrice)
-                                    <div>
-                                        <label class="text-xs font-medium text-slate-500">Precio del pollo</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            min="0.01"
-                                            max="9999999999.99"
-                                            x-bind:name="'prices[' + index + ']'"
-                                            x-model="prices[index]"
-                                            x-on:input="syncPaid()"
-                                            required
-                                            class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                                        >
-                                    </div>
-                                @endif
                             </div>
                         </div>
                     </template>
@@ -243,7 +256,7 @@
                     @else
                         <p class="text-sm font-medium text-slate-300">Precio manual</p>
                         <p class="mt-1 text-xs text-slate-400">
-                            El precio automático está desactivado. Escribe el precio de cada pollo; el peso se registra igual.
+                            El precio automático está desactivado. Escribe el precio de cada pollo; el peso se calcula automáticamente con el precio por libra de referencia y puedes ajustarlo.
                         </p>
                     @endif
 

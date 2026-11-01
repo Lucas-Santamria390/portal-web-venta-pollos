@@ -35,13 +35,13 @@ class DashboardTest extends TestCase
         ]);
 
         $old = Order::factory()->collected()->withChickens(1, 5, 999)->create([
-            'delivered_at' => now()->subMonth(),
-            'paid_at' => now()->subMonth(),
+            'delivered_at' => now()->startOfMonth()->subDay(),
+            'paid_at' => now()->startOfMonth()->subDay(),
         ]);
         Payment::factory()->create([
             'order_id' => $old->getKey(),
             'amount' => '999.00',
-            'paid_at' => now()->subMonth(),
+            'paid_at' => now()->startOfMonth()->subDay(),
         ]);
 
         $response = $this->actingAs($user)->get('/');

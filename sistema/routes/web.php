@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'panel'])->name('dashboard.panel');
 
     Route::get('/pedidos', [OrderController::class, 'index'])->name('pedidos.index');
     Route::get('/pedidos/nueva', [OrderController::class, 'create'])->name('pedidos.create');

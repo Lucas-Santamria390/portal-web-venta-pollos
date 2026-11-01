@@ -16,7 +16,7 @@ class NavigationTest extends TestCase
         Setting::factory()->create();
         $admin = User::factory()->create();
 
-        foreach (['/', '/pedidos', '/pedidos/nueva', '/pedidos/vender', '/por-cobrar', '/clientes', '/clientes/nuevo', '/configuracion', '/usuarios'] as $path) {
+        foreach (['/', '/dashboard', '/pedidos', '/pedidos/nueva', '/pedidos/vender', '/por-cobrar', '/clientes', '/clientes/nuevo', '/configuracion', '/usuarios'] as $path) {
             $this->actingAs($admin)->get($path)->assertOk();
         }
     }

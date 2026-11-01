@@ -5,6 +5,12 @@
         </svg>
         @break
 
+    @case('chart')
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 13.5V21h4.5v-7.5H3zM9.75 8.25V21h4.5V8.25h-4.5zM16.5 3v18H21V3h-4.5z" />
+        </svg>
+        @break
+
     @case('receipt')
         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

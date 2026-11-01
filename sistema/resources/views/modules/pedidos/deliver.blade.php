@@ -1,6 +1,7 @@
 @php
     $autoPrice = (bool) $setting->auto_price;
-    $initialPricePerLb = old('price_per_lb', $order->price_per_lb ?? $setting->price_per_lb);
+    $initialPricePerLb = old('price_per_lb', (float) $order->price_per_lb > 0 ? $order->price_per_lb : $setting->price_per_lb);
+    $canDeriveWeight = ! $autoPrice && (float) $initialPricePerLb > 0;
     $deliveryWeights = $order->items->values()->map(
         fn ($item, $index) => old("weights.{$index}", $item->weight_lb !== null ? number_format((float) $item->weight_lb, 2, '.', '') : '')
     )->all();
@@ -82,7 +83,9 @@
                 <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <h2 class="font-semibold text-slate-900">Peso y precio de cada pollo</h2>
-                        <span class="text-xs text-slate-400">El peso es obligatorio para entregar</span>
+                        <span class="text-xs text-slate-400">
+                            {{ $canDeriveWeight ? 'El peso se calcula desde el precio y puede ajustarse' : 'El peso es obligatorio para entregar' }}
+                        </span>
                     </div>
 
                     <div class="mt-4 space-y-3">
@@ -94,21 +97,6 @@
                                 </div>
 
                                 <div class="mt-2 grid gap-3 sm:grid-cols-2">
-                                    <div>
-                                        <label class="text-xs font-medium text-slate-500">Peso en libras</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            min="0.01"
-                                            max="9999.99"
-                                            name="weights[{{ $index }}]"
-                                            value="{{ old("weights.{$index}", $item->weight_lb !== null ? number_format((float) $item->weight_lb, 2, '.', '') : '') }}"
-                                            x-model="weights[{{ $index }}]"
-                                            required
-                                            class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
-                                        >
-                                    </div>
-
                                     @unless ($autoPrice)
                                         <div>
                                             <label class="text-xs font-medium text-slate-500">Precio del pollo</label>
@@ -120,11 +108,37 @@
                                                 name="prices[{{ $index }}]"
                                                 value="{{ old("prices.{$index}", $item->price !== null ? number_format((float) $item->price, 2, '.', '') : '') }}"
                                                 x-model="prices[{{ $index }}]"
+                                                x-on:input="syncWeightFromPrice({{ $index }})"
                                                 required
                                                 class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
                                             >
                                         </div>
                                     @endunless
+
+                                    <div>
+                                        <label class="text-xs font-medium text-slate-500">
+                                            Peso en libras
+                                            @if ($canDeriveWeight)
+                                                <span class="font-normal text-slate-400">(calculado, editable)</span>
+                                            @endif
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0.01"
+                                            max="9999.99"
+                                            name="weights[{{ $index }}]"
+                                            value="{{ old("weights.{$index}", $item->weight_lb !== null ? number_format((float) $item->weight_lb, 2, '.', '') : '') }}"
+                                            x-model="weights[{{ $index }}]"
+                                            @if (! $canDeriveWeight) required @endif
+                                            class="mt-1 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                                        >
+                                        @if ($canDeriveWeight)
+                                            <p class="mt-1 text-xs text-slate-400">
+                                                Se calcula con el precio por libra de referencia: <x-money :value="$initialPricePerLb" />.
+                                            </p>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                         @endforeach
@@ -154,7 +168,7 @@
                     @else
                         <p class="text-sm font-medium text-slate-300">Precio manual</p>
                         <p class="mt-1 text-xs text-slate-400">
-                            El precio automático está desactivado. Escribe el precio de cada pollo; el peso se registra igual.
+                            El precio automático está desactivado. Escribe el precio de cada pollo; el peso se calcula automáticamente con el precio por libra de referencia y puedes ajustarlo.
                         </p>
                     @endif
 
